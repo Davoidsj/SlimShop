@@ -6,16 +6,17 @@ RUN a2enmod rewrite
 # Set working directory early
 WORKDIR /var/www/html
 
-# Copy only composer files first (to leverage Docker cache)
-COPY composer.json composer.lock ./
+# Install system dependencies and PHP extensions
+RUN apt-get update && apt-get install -y \
+    libzip-dev zip unzip \
+    libpq-dev \
+    && docker-php-ext-install zip pgsql pdo_pgsql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install PHP extensions required by your dependencies
-RUN apt-get update && apt-get install -y \
-    libzip-dev zip unzip \
-    && docker-php-ext-install zip
+# Copy only composer files first (to leverage Docker cache)
+COPY composer.json composer.lock ./
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
