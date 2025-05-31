@@ -1,0 +1,44 @@
+# Composer dependencies
+/vendor/
+
+# Node modules (if you use frontend tools in the same repo)
+/node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Logs and temp files
+*.log
+*.cache
+*.tmp
+/tmp/
+logs/
+storage/logs/
+storage/cache/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# PHPUnit test results
+phpunit.xml
+.phpunit.result.cache
+
+# Render deploy config (optional)
+render.yaml
+
+# Coverage reports
+coverage/
+
+# PHPStorm specific
+*.iml
+
+# Composer lock file (optional if you don't want to commit it)
+# composer.lock
