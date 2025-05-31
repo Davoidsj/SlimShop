@@ -12,19 +12,16 @@ COPY composer.json composer.lock ./
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install PHP extensions required by your dependencies (add more if needed)
+# Install PHP extensions required by your dependencies
 RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip \
     && docker-php-ext-install zip
 
-# Run composer install (will only rerun if composer files change)
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy rest of the project files
+# Copy rest of the project files (including .env)
 COPY . .
-
-# Explicitly copy .env file if needed
-COPY .env ./
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
