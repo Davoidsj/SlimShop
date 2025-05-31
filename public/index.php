@@ -15,15 +15,15 @@ $app = AppFactory::create();
 
 // Build PostgreSQL connection string from env vars
 $pgConnStr = sprintf(
-    "host=%s port=%s dbname=%s user=%s password=%s sslmode=%s options='endpoint=%s'",
+    "host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
     $_ENV['DB_HOST'],
     $_ENV['DB_PORT'],
     $_ENV['DB_NAME'],
     $_ENV['DB_USER'],
     $_ENV['DB_PASS'],
-    $_ENV['DB_SSLMODE'],
-    $_ENV['DB_ENDPOINT']
+    $_ENV['DB_SSLMODE']
 );
+
 $db = pg_connect($pgConnStr);
 if (!$db) {
     die("❌ Database connection failed.");
