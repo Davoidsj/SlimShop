@@ -23,6 +23,9 @@ RUN composer install --no-dev --optimize-autoloader
 # Copy rest of the project files
 COPY . .
 
+# Explicitly copy .env file if needed
+COPY .env ./
+
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
 
