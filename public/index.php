@@ -73,10 +73,17 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
     $values = [];
     $i = 1;
 
-    // Search by title, brand, or description
+    // Search by general term
     if (!empty($params['search'])) {
         $whereClauses[] = "(LOWER(title) LIKE LOWER($$i) OR LOWER(brand) LIKE LOWER($$i) OR LOWER(description) LIKE LOWER($$i))";
         $values[] = '%' . $params['search'] . '%';
+        $i++;
+    }
+
+    // Filter by exact title
+    if (!empty($params['title'])) {
+        $whereClauses[] = "LOWER(title) = LOWER($$i)";
+        $values[] = $params['title'];
         $i++;
     }
 
@@ -99,11 +106,9 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
         $i++;
     }
 
-    // Filter by tags (JSONB array contains)
+    // Filter by tags (JSONB contains)
     if (!empty($params['tags'])) {
-        // Assume tags are comma-separated
         $tags = explode(',', $params['tags']);
-        $placeholders = [];
         foreach ($tags as $tag) {
             $whereClauses[] = "tags @> $$i::jsonb";
             $values[] = json_encode([$tag]);
