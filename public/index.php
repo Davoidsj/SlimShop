@@ -157,6 +157,36 @@ $app->get('/product/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /categories - fetch all categories
+$app->get('/categories', function (Request $request, Response $response) use ($db) {
+    $result = pg_query($db, "SELECT * FROM categories ORDER BY id ASC");
+
+    $categories = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $categories[] = $row;
+    }
+
+    $response->getBody()->write(json_encode($categories));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+// GET /category/{id} - fetch single category by ID
+$app->get('/category/{id}', function (Request $request, Response $response, $args) use ($db) {
+    $id = (int)$args['id'];
+
+    $result = pg_query_params($db, "SELECT * FROM categories WHERE id = $1", [$id]);
+
+    if ($row = pg_fetch_assoc($result)) {
+        $response->getBody()->write(json_encode($row));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Category not found']));
+        return $response->withStatus(404);
+    }
+
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+
 $app->get('/', function ($request, $response, $args) {
     $response->getBody()->write("Your php server is running....");
     return $response;
