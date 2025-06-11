@@ -186,6 +186,83 @@ $app->get('/category/{id}', function (Request $request, Response $response, $arg
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /trending
+$app->get('/trending', function (Request $request, Response $response) use ($db) {
+    $query = "
+        SELECT 
+            *,
+            (
+                (rating * 2) +
+                (discountPercentage * 0.5) +
+                (CASE WHEN stock = 0 THEN 0 ELSE (100.0 / stock) END) +
+                (
+                    CASE 
+                        WHEN (meta->>'updatedAt') IS NOT NULL THEN 
+                            (30.0 / (EXTRACT(DAY FROM NOW() - (meta->>'updatedAt')::timestamp) + 1))
+                        ELSE 0
+                    END
+                )
+            ) AS trending_score
+        FROM products
+        ORDER BY trending_score DESC
+        LIMIT 10
+    ";
+
+    $result = pg_query($db, $query);
+
+    $trending = [];
+    while ($row = pg_fetch_assoc($result)) {
+        parseJsonFields($row);
+        $trending[] = $row;
+    }
+
+    $response->getBody()->write(json_encode($trending));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+
+// GET /similar/{id}
+$app->get('/similar/{id}', function (Request $request, Response $response, $args) use ($db) {
+    $id = (int)$args['id'];
+
+    // Get the base product
+    $result = pg_query_params($db, "SELECT * FROM products WHERE id = $1", [$id]);
+    $product = pg_fetch_assoc($result);
+
+    if (!$product) {
+        $response->getBody()->write(json_encode(['error' => 'Product not found']));
+        return $response->withStatus(404);
+    }
+
+    // Build similarity query by category and first tag
+    $category = $product['category'];
+    $tags = json_decode($product['tags'], true);
+    $firstTag = $tags[0] ?? null;
+
+    $sql = "SELECT * FROM products WHERE id != $1 AND category = $2";
+    $params = [$id, $category];
+    $i = 3;
+
+    if ($firstTag) {
+        $sql .= " AND tags @> $$i::jsonb";
+        $params[] = json_encode([$firstTag]);
+    }
+
+    $sql .= " LIMIT 10";
+
+    $result = pg_query_params($db, $sql, $params);
+
+    $similar = [];
+    while ($row = pg_fetch_assoc($result)) {
+        parseJsonFields($row);
+        $similar[] = $row;
+    }
+
+    $response->getBody()->write(json_encode($similar));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+
 
 $app->get('/', function ($request, $response, $args) {
     $response->getBody()->write("Your php server is running....");
