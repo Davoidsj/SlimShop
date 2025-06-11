@@ -271,9 +271,8 @@ $app->get('/imagecarousel', function (Request $request, Response $response) use 
         $carouselImages[] = [
             'id' => (int)$row['id'],
             'title' => $row['title'],
-            'image_url' => $row['image_url'],
-            'link_url' => $row['link_url'],
-            'priority' => (int)$row['priority']
+            'image_url' => $row['image_url']
+        
         ];
     }
 
