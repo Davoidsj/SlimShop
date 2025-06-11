@@ -264,7 +264,7 @@ $app->get('/similar/{id}', function (Request $request, Response $response, $args
 
 // GET /imagecarousel - fetch image carousel entries
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
-    $result = pg_query($db,  ");
+    $result = pg_query($db, "SELECT * FROM image_carousel ORDER BY id");
 
     $carouselImages = [];
     while ($row = pg_fetch_assoc($result)) {
