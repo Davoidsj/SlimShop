@@ -262,6 +262,24 @@ $app->get('/similar/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /imagecarousel - fetch image carousel entries
+$app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
+    $result = pg_query($db, "SELECT * FROM imagecarousel ORDER BY priority ASC, id DESC");
+
+    $carouselImages = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $carouselImages[] = [
+            'id' => (int)$row['id'],
+            'title' => $row['title'],
+            'image_url' => $row['image_url'],
+            'link_url' => $row['link_url'],
+            'priority' => (int)$row['priority']
+        ];
+    }
+
+    $response->getBody()->write(json_encode($carouselImages));
+    return $response->withHeader('Content-Type', 'application/json');
+});
 
 
 $app->get('/', function ($request, $response, $args) {
