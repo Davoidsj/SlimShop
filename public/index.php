@@ -64,7 +64,6 @@ $app->get('/favicon.ico', function (Request $request, Response $response) {
     }
     return $response->withStatus(404);
 });
-
 // GET /products
 $app->get('/products', function (Request $request, Response $response) use ($db) {
     $params = $request->getQueryParams();
@@ -124,11 +123,14 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
     $sortBy = in_array($params['sortBy'] ?? '', $allowedSortFields) ? $params['sortBy'] : 'id';
     $order = strtoupper($params['order'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
 
-    // Pagination
-    $limit = is_numeric($params['limit'] ?? null) ? (int)$params['limit'] : 20;
-    $offset = is_numeric($params['offset'] ?? null) ? (int)$params['offset'] : 0;
+    // Optional Pagination
+    $limit = isset($params['limit']) && is_numeric($params['limit']) ? (int)$params['limit'] : null;
+    $offset = isset($params['offset']) && is_numeric($params['offset']) ? (int)$params['offset'] : 0;
 
-    $query = "SELECT * FROM products $whereSQL ORDER BY $sortBy $order LIMIT $limit OFFSET $offset";
+    $query = "SELECT * FROM products $whereSQL ORDER BY $sortBy $order";
+    if ($limit !== null) {
+        $query .= " LIMIT $limit OFFSET $offset";
+    }
 
     $result = pg_query_params($db, $query, $values);
 
@@ -141,6 +143,7 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
     $response->getBody()->write(json_encode($products));
     return $response->withHeader('Content-Type', 'application/json');
 });
+
 
 
 // GET /product/{id}
