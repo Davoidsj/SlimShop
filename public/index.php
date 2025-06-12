@@ -280,6 +280,28 @@ $app->get('/imagecarousel', function (Request $request, Response $response) use 
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /todays-sales - products on sale today
+$app->get('/todays-sales', function (Request $request, Response $response) use ($db) {
+    $query = "
+        SELECT * FROM products
+        WHERE is_on_sale = TRUE
+          AND CURRENT_DATE BETWEEN sale_start AND sale_end
+        ORDER BY discountPercentage DESC
+        LIMIT 10
+    ";
+
+    $result = pg_query($db, $query);
+
+    $sales = [];
+    while ($row = pg_fetch_assoc($result)) {
+        parseJsonFields($row);
+        $sales[] = $row;
+    }
+
+    $response->getBody()->write(json_encode($sales));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
 
 $app->get('/', function ($request, $response, $args) {
     $response->getBody()->write("Your php server is running....");
