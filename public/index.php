@@ -219,40 +219,33 @@ $app->get('/trending', function (Request $request, Response $response) use ($db)
 $app->get('/similar/{id}', function (Request $request, Response $response, $args) use ($db) {
     $id = (int)$args['id'];
 
+    // Fetch the product first
     $result = pg_query_params($db, "SELECT * FROM products WHERE id = $1", [$id]);
     $product = pg_fetch_assoc($result);
 
     if (!$product) {
         $response->getBody()->write(json_encode(['error' => 'Product not found']));
-        return $response->withStatus(404);
+        return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
     }
 
     $category = $product['category'];
-    $tags = json_decode($product['tags'], true);
-    $firstTag = $tags[0] ?? null;
 
-    $sql = "SELECT * FROM products WHERE id != $1 AND category = $2";
+    // Query similar products by category only (exclude current product id)
+    $sql = "SELECT * FROM products WHERE id != $1 AND category = $2 LIMIT 10";
     $params = [$id, $category];
-    $i = 3;
-
-    if ($firstTag) {
-        $sql .= " AND tags @> $$i::jsonb";
-        $params[] = json_encode([$firstTag]);
-    }
-
-    $sql .= " LIMIT 10";
 
     $result = pg_query_params($db, $sql, $params);
 
     $similar = [];
     while ($row = pg_fetch_assoc($result)) {
-        parseJsonFields($row);
+        parseJsonFields($row); // your function to parse JSONB fields
         $similar[] = $row;
     }
 
     $response->getBody()->write(json_encode($similar));
     return $response->withHeader('Content-Type', 'application/json');
 });
+
 
 // GET /imagecarousel
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
