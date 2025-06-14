@@ -1,4 +1,5 @@
 <?php
+
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -47,14 +48,13 @@ $app->add(function (Request $request, RequestHandlerInterface $handler): Respons
         ->withHeader('Access-Control-Allow-Origin', $origin)
         ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
         ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true'); // if needed
+        ->withHeader('Access-Control-Allow-Credentials', 'true');
 });
 
 // Handle preflight requests
 $app->options('/{routes:.+}', function (Request $request, Response $response) {
     return $response;
 });
-
 
 $app->get('/favicon.ico', function (Request $request, Response $response) {
     $faviconPath = __DIR__ . '/../public/favicon.ico';
@@ -64,6 +64,7 @@ $app->get('/favicon.ico', function (Request $request, Response $response) {
     }
     return $response->withStatus(404);
 });
+
 // GET /products
 $app->get('/products', function (Request $request, Response $response) use ($db) {
     $params = $request->getQueryParams();
@@ -72,40 +73,36 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
     $values = [];
     $i = 1;
 
-    // Search by general term
     if (!empty($params['search'])) {
         $whereClauses[] = "(LOWER(title) LIKE LOWER($$i) OR LOWER(brand) LIKE LOWER($$i) OR LOWER(description) LIKE LOWER($$i))";
         $values[] = '%' . $params['search'] . '%';
         $i++;
     }
 
-    // Filter by exact title
     if (!empty($params['title'])) {
         $whereClauses[] = "LOWER(title) = LOWER($$i)";
         $values[] = $params['title'];
         $i++;
     }
 
-    // Filter by category
     if (!empty($params['category'])) {
         $whereClauses[] = "category = $$i";
         $values[] = $params['category'];
         $i++;
     }
 
-    // Filter by price range
     if (!empty($params['minPrice'])) {
         $whereClauses[] = "price >= $$i";
         $values[] = $params['minPrice'];
         $i++;
     }
+
     if (!empty($params['maxPrice'])) {
         $whereClauses[] = "price <= $$i";
         $values[] = $params['maxPrice'];
         $i++;
     }
 
-    // Filter by tags (JSONB contains)
     if (!empty($params['tags'])) {
         $tags = explode(',', $params['tags']);
         foreach ($tags as $tag) {
@@ -115,15 +112,12 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
         }
     }
 
-    // Construct WHERE clause
     $whereSQL = count($whereClauses) > 0 ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
 
-    // Sorting
     $allowedSortFields = ['price', 'rating', 'title', 'stock', 'id'];
     $sortBy = in_array($params['sortBy'] ?? '', $allowedSortFields) ? $params['sortBy'] : 'id';
     $order = strtoupper($params['order'] ?? 'ASC') === 'DESC' ? 'DESC' : 'ASC';
 
-    // Optional Pagination
     $limit = isset($params['limit']) && is_numeric($params['limit']) ? (int)$params['limit'] : null;
     $offset = isset($params['offset']) && is_numeric($params['offset']) ? (int)$params['offset'] : 0;
 
@@ -144,8 +138,6 @@ $app->get('/products', function (Request $request, Response $response) use ($db)
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-
-
 // GET /product/{id}
 $app->get('/product/{id}', function (Request $request, Response $response, $args) use ($db) {
     $id = (int)$args['id'];
@@ -160,7 +152,7 @@ $app->get('/product/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// GET /categories - fetch all categories
+// GET /categories
 $app->get('/categories', function (Request $request, Response $response) use ($db) {
     $result = pg_query($db, "SELECT * FROM categories ORDER BY id ASC");
 
@@ -173,7 +165,7 @@ $app->get('/categories', function (Request $request, Response $response) use ($d
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// GET /category/{id} - fetch single category by ID
+// GET /category/{id}
 $app->get('/category/{id}', function (Request $request, Response $response, $args) use ($db) {
     $id = (int)$args['id'];
 
@@ -223,12 +215,10 @@ $app->get('/trending', function (Request $request, Response $response) use ($db)
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-
 // GET /similar/{id}
 $app->get('/similar/{id}', function (Request $request, Response $response, $args) use ($db) {
     $id = (int)$args['id'];
 
-    // Get the base product
     $result = pg_query_params($db, "SELECT * FROM products WHERE id = $1", [$id]);
     $product = pg_fetch_assoc($result);
 
@@ -237,7 +227,6 @@ $app->get('/similar/{id}', function (Request $request, Response $response, $args
         return $response->withStatus(404);
     }
 
-    // Build similarity query by category and first tag
     $category = $product['category'];
     $tags = json_decode($product['tags'], true);
     $firstTag = $tags[0] ?? null;
@@ -265,7 +254,7 @@ $app->get('/similar/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// GET /imagecarousel - fetch image carousel entries
+// GET /imagecarousel
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
     $result = pg_query($db, "SELECT * FROM image_carousel ORDER BY id");
 
@@ -275,7 +264,6 @@ $app->get('/imagecarousel', function (Request $request, Response $response) use 
             'id' => (int)$row['id'],
             'title' => $row['title'],
             'image_url' => $row['image_url']
-        
         ];
     }
 
@@ -283,7 +271,7 @@ $app->get('/imagecarousel', function (Request $request, Response $response) use 
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// GET /todays-sales - products on sale today
+// GET /todays-sales
 $app->get('/todays-sales', function (Request $request, Response $response) use ($db) {
     $query = "
         SELECT * FROM products
@@ -305,81 +293,78 @@ $app->get('/todays-sales', function (Request $request, Response $response) use (
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-
-// GET /cart_items - fetch all or user-specific cart items
+// GET /cart_items
 $app->get('/cart_items', function (Request $request, Response $response) use ($db) {
-    $params = $request->getQueryParams();
-    $values = [];
-    $whereSQL = '';
+    $params = $request->getQueryParams();
+    $values = [];
+    $whereSQL = '';
 
-    if (!empty($params['user_uid'])) {
-        $whereSQL = 'WHERE user_uid = $1';
-        $values[] = $params['user_uid'];
-    }
+    if (!empty($params['user_uid'])) {
+        $whereSQL = 'WHERE user_uid = $1';
+        $values[] = $params['user_uid'];
+    }
 
-    $query = "SELECT * FROM cart_items $whereSQL ORDER BY added_at DESC";
-    $result = pg_query_params($db, $query, $values);
+    $query = "SELECT * FROM cart_items $whereSQL ORDER BY added_at DESC";
+    $result = pg_query_params($db, $query, $values);
 
-    $cartItems = [];
-    while ($row = pg_fetch_assoc($result)) {
-        $cartItems[] = [
-            'id' => (int)$row['id'],
-            'user_uid' => $row['user_uid'],
-            'product_id' => (int)$row['product_id'],
-            'img_url' => $row['img_url'],
-            'quantity' => (int)$row['quantity'],
-            'added_at' => $row['added_at']
-        ];
-    }
+    $cartItems = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $cartItems[] = [
+            'id' => (int)$row['id'],
+            'user_uid' => $row['user_uid'],
+            'product_id' => (int)$row['product_id'],
+            'img_url' => $row['img_url'],
+            'quantity' => (int)$row['quantity'],
+            'added_at' => $row['added_at']
+        ];
+    }
 
-    $response->getBody()->write(json_encode($cartItems));
-    return $response->withHeader('Content-Type', 'application/json');
+    $response->getBody()->write(json_encode($cartItems));
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
-// GET /cart_items/{id} - fetch a single cart item by ID
+// GET /cart_items/{id}
 $app->get('/cart_items/{id}', function (Request $request, Response $response, $args) use ($db) {
-    $id = (int)$args['id'];
-    $result = pg_query_params($db, "SELECT * FROM cart_items WHERE id = $1", [$id]);
+    $id = (int)$args['id'];
+    $result = pg_query_params($db, "SELECT * FROM cart_items WHERE id = $1", [$id]);
 
-    if ($row = pg_fetch_assoc($result)) {
-        $cartItem = [
-            'id' => (int)$row['id'],
-            'user_uid' => $row['user_uid'],
-            'product_id' => (int)$row['product_id'],
-            'img_url' => $row['img_url'],
-            'quantity' => (int)$row['quantity'],
-            'added_at' => $row['added_at']
-        ];
-        $response->getBody()->write(json_encode($cartItem));
-    } else {
-        $response->getBody()->write(json_encode(['error' => 'Cart item not found']));
-        return $response->withStatus(404);
-    }
+    if ($row = pg_fetch_assoc($result)) {
+        $cartItem = [
+            'id' => (int)$row['id'],
+            'user_uid' => $row['user_uid'],
+            'product_id' => (int)$row['product_id'],
+            'img_url' => $row['img_url'],
+            'quantity' => (int)$row['quantity'],
+            'added_at' => $row['added_at']
+        ];
+        $response->getBody()->write(json_encode($cartItem));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Cart item not found']));
+        return $response->withStatus(404);
+    }
 
-    return $response->withHeader('Content-Type', 'application/json');
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
-// DELETE /cart_items/{id}/delete - delete a cart item by ID
+// DELETE /cart_items/{id}/delete
 $app->delete('/cart_items/{id}/delete', function (Request $request, Response $response, $args) use ($db) {
-    $id = (int)$args['id'];
-    $result = pg_query_params($db, "DELETE FROM cart_items WHERE id = $1 RETURNING id", [$id]);
+    $id = (int)$args['id'];
+    $result = pg_query_params($db, "DELETE FROM cart_items WHERE id = $1 RETURNING id", [$id]);
 
-    if ($row = pg_fetch_assoc($result)) {
-        $response->getBody()->write(json_encode(['message' => 'Cart item deleted', 'id' => (int)$row['id']]));
-    } else {
-        $response->getBody()->write(json_encode(['error' => 'Cart item not found or already deleted']));
-        return $response->withStatus(404);
-    }
+    if ($row = pg_fetch_assoc($result)) {
+        $response->getBody()->write(json_encode(['message' => 'Cart item deleted', 'id' => (int)$row['id']]));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Cart item not found or already deleted']));
+        return $response->withStatus(404);
+    }
 
-    return $response->withHeader('Content-Type', 'application/json');
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
-
-
+// Root
 $app->get('/', function ($request, $response, $args) {
     $response->getBody()->write("Your php server is running....");
     return $response;
 });
-
 
 $app->run();
