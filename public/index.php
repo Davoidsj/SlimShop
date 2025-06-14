@@ -305,70 +305,73 @@ $app->get('/todays-sales', function (Request $request, Response $response) use (
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+
 // GET /cart_items - fetch all or user-specific cart items
 $app->get('/cart_items', function (Request $request, Response $response) use ($db) {
-    $params = $request->getQueryParams();
-    $values = [];
-    $whereSQL = '';
+    $params = $request->getQueryParams();
+    $values = [];
+    $whereSQL = '';
 
-    if (!empty($params['user_uid'])) {
-        $whereSQL = 'WHERE user_uid = $1';
-        $values[] = $params['user_uid'];
-    }
+    if (!empty($params['user_uid'])) {
+        $whereSQL = 'WHERE user_uid = $1';
+        $values[] = $params['user_uid'];
+    }
 
-    $query = "SELECT * FROM cart_items $whereSQL ORDER BY added_at DESC";
-    $result = pg_query_params($db, $query, $values);
+    $query = "SELECT * FROM cart_items $whereSQL ORDER BY added_at DESC";
+    $result = pg_query_params($db, $query, $values);
 
-    $cartItems = [];
-    while ($row = pg_fetch_assoc($result)) {
-        $cartItems[] = [
-            'id' => (int)$row['id'],
-            'user_uid' => $row['user_uid'],
-            'product_id' => (int)$row['product_id'],
-            'quantity' => (int)$row['quantity'],
-            'added_at' => $row['added_at']
-        ];
-    }
+    $cartItems = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $cartItems[] = [
+            'id' => (int)$row['id'],
+            'user_uid' => $row['user_uid'],
+            'product_id' => (int)$row['product_id'],
+            'img_url' => $row['img_url'],
+            'quantity' => (int)$row['quantity'],
+            'added_at' => $row['added_at']
+        ];
+    }
 
-    $response->getBody()->write(json_encode($cartItems));
-    return $response->withHeader('Content-Type', 'application/json');
+    $response->getBody()->write(json_encode($cartItems));
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
 // GET /cart_items/{id} - fetch a single cart item by ID
 $app->get('/cart_items/{id}', function (Request $request, Response $response, $args) use ($db) {
-    $id = (int)$args['id'];
-    $result = pg_query_params($db, "SELECT * FROM cart_items WHERE id = $1", [$id]);
+    $id = (int)$args['id'];
+    $result = pg_query_params($db, "SELECT * FROM cart_items WHERE id = $1", [$id]);
 
-    if ($row = pg_fetch_assoc($result)) {
-        $cartItem = [
-            'id' => (int)$row['id'],
-            'user_uid' => $row['user_uid'],
-            'product_id' => (int)$row['product_id'],
-            'quantity' => (int)$row['quantity'],
-            'added_at' => $row['added_at']
-        ];
-        $response->getBody()->write(json_encode($cartItem));
-    } else {
-        $response->getBody()->write(json_encode(['error' => 'Cart item not found']));
-        return $response->withStatus(404);
-    }
+    if ($row = pg_fetch_assoc($result)) {
+        $cartItem = [
+            'id' => (int)$row['id'],
+            'user_uid' => $row['user_uid'],
+            'product_id' => (int)$row['product_id'],
+            'img_url' => $row['img_url'],
+            'quantity' => (int)$row['quantity'],
+            'added_at' => $row['added_at']
+        ];
+        $response->getBody()->write(json_encode($cartItem));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Cart item not found']));
+        return $response->withStatus(404);
+    }
 
-    return $response->withHeader('Content-Type', 'application/json');
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
 // DELETE /cart_items/{id}/delete - delete a cart item by ID
 $app->delete('/cart_items/{id}/delete', function (Request $request, Response $response, $args) use ($db) {
-    $id = (int)$args['id'];
-    $result = pg_query_params($db, "DELETE FROM cart_items WHERE id = $1 RETURNING id", [$id]);
+    $id = (int)$args['id'];
+    $result = pg_query_params($db, "DELETE FROM cart_items WHERE id = $1 RETURNING id", [$id]);
 
-    if ($row = pg_fetch_assoc($result)) {
-        $response->getBody()->write(json_encode(['message' => 'Cart item deleted', 'id' => (int)$row['id']]));
-    } else {
-        $response->getBody()->write(json_encode(['error' => 'Cart item not found or already deleted']));
-        return $response->withStatus(404);
-    }
+    if ($row = pg_fetch_assoc($result)) {
+        $response->getBody()->write(json_encode(['message' => 'Cart item deleted', 'id' => (int)$row['id']]));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Cart item not found or already deleted']));
+        return $response->withStatus(404);
+    }
 
-    return $response->withHeader('Content-Type', 'application/json');
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
 
