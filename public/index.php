@@ -305,6 +305,35 @@ $app->get('/todays-sales', function (Request $request, Response $response) use (
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /cart_items - fetch all or user-specific cart items
+$app->get('/cart_items', function (Request $request, Response $response) use ($db) {
+    $params = $request->getQueryParams();
+    $values = [];
+    $whereSQL = '';
+
+    if (!empty($params['user_uid'])) {
+        $whereSQL = 'WHERE user_uid = $1';
+        $values[] = $params['user_uid'];
+    }
+
+    $query = "SELECT * FROM cart_items $whereSQL ORDER BY added_at DESC";
+    $result = pg_query_params($db, $query, $values);
+
+    $cartItems = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $cartItems[] = [
+            'id' => (int)$row['id'],
+            'user_uid' => $row['user_uid'],
+            'product_id' => (int)$row['product_id'],
+            'quantity' => (int)$row['quantity'],
+            'added_at' => $row['added_at']
+        ];
+    }
+
+    $response->getBody()->write(json_encode($cartItems));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
 
 $app->get('/', function ($request, $response, $args) {
     $response->getBody()->write("Your php server is running....");
