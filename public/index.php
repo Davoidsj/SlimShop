@@ -301,6 +301,38 @@ $app->get('/reviews/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+$app->get('/reviews/product/{product_id}', function (Request $request, Response $response, $args) use ($db) {
+    $productId = (int)$args['product_id'];
+
+    $query = "
+        SELECT reviews.*, products.title, products.thumbnail
+        FROM reviews
+        INNER JOIN products ON reviews.product_id = products.id
+        WHERE reviews.product_id = $1
+        ORDER BY reviews.date DESC
+    ";
+    $result = pg_query_params($db, $query, [$productId]);
+
+    $reviews = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $reviews[] = [
+            'id' => (int)$row['id'],
+            'product_id' => (int)$row['product_id'],
+            'rating' => (int)$row['rating'],
+            'comment' => $row['comment'],
+            'date' => $row['date'],
+            'reviewerName' => $row['reviewername'],
+            'reviewerEmail' => $row['revieweremail'],
+            'productTitle' => $row['title'],
+            'productThumbnail' => $row['thumbnail']
+        ];
+    }
+
+    $response->getBody()->write(json_encode($reviews));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+
 // GET /imagecarousel
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
     $result = pg_query($db, "SELECT * FROM image_carousel ORDER BY id");
