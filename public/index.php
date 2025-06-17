@@ -302,36 +302,36 @@ $app->get('/reviews/{id}', function (Request $request, Response $response, $args
 });
 
 $app->get('/reviews/product/{product_id}', function (Request $request, Response $response, $args) use ($db) {
-    $productId = (int)$args['product_id'];
+    $productId = (int)$args['product_id'];
 
-    $query = "
-        SELECT reviews.*, products.title, products.thumbnail
-        FROM reviews
-        INNER JOIN products ON reviews.product_id = products.id
-        WHERE reviews.product_id = $1
-        ORDER BY reviews.date DESC
-    ";
-    $result = pg_query_params($db, $query, [$productId]);
+    $query = "
+        SELECT *
+        FROM reviews
+        INNER JOIN products ON reviews.product_id = products.id
+        WHERE reviews.product_id = $1
+        ORDER BY reviews.date DESC
+    ";
 
-    $reviews = [];
-    while ($row = pg_fetch_assoc($result)) {
-        $reviews[] = [
-            'id' => (int)$row['id'],
-            'product_id' => (int)$row['product_id'],
-            'rating' => (int)$row['rating'],
-            'comment' => $row['comment'],
-            'date' => $row['date'],
-            'reviewerName' => $row['reviewername'],
-            'reviewerEmail' => $row['revieweremail'],
-            'productTitle' => $row['title'],
-            'productThumbnail' => $row['thumbnail']
-        ];
-    }
+    $result = pg_query_params($db, $query, [$productId]);
 
-    $response->getBody()->write(json_encode($reviews));
-    return $response->withHeader('Content-Type', 'application/json');
+    $reviews = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $reviews[] = [
+            'id' => (int)$row['id'],
+            'product_id' => (int)$row['product_id'],
+            'rating' => (int)$row['rating'],
+            'comment' => $row['comment'],
+            'date' => $row['date'],
+            'reviewerName' => $row['reviewername'],
+            'reviewerEmail' => $row['revieweremail'],
+            'productTitle' => $row['title'],
+            'productThumbnail' => $row['thumbnail']
+        ];
+    }
+
+    $response->getBody()->write(json_encode($reviews));
+    return $response->withHeader('Content-Type', 'application/json');
 });
-
 
 // GET /imagecarousel
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
