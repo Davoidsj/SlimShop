@@ -342,61 +342,58 @@ $app->get('/cart_items/{id}', function (Request $request, Response $response, $a
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// POST /cart_items
-$app->post('/cart_items', function (Request $request, Response $response) use ($db) {
+
+// PUT /cart_items/{id}/update
+$app->put('/cart_items/{id}/update', function (Request $request, Response $response, $args) use ($db) {
+    $id = (int)$args['id'];
     $data = json_decode($request->getBody()->getContents(), true);
 
-    $requiredFields = ['user_uid', 'product_id', 'img_url', 'quantity'];
-    foreach ($requiredFields as $field) {
-        if (empty($data[$field])) {
-            return $response
-                ->withStatus(400)
-                ->withHeader('Content-Type', 'application/json')
-                ->write(json_encode(['error' => "$field is required."]));
-        }
+    // Validate required fields
+    if (!isset($data['quantity']) && !isset($data['price'])) {
+        $response->getBody()->write(json_encode(['error' => 'Nothing to update']));
+        return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
     }
 
-    // Fetch price from products table
-    $productResult = pg_query_params($db, "SELECT price FROM products WHERE id = $1", [$data['product_id']]);
-    if (!$productResult || !($productRow = pg_fetch_assoc($productResult))) {
-        return $response
-            ->withStatus(404)
-            ->withHeader('Content-Type', 'application/json')
-            ->write(json_encode(['error' => 'Product not found.']));
+    $fields = [];
+    $values = [];
+    $i = 1;
+
+    if (isset($data['quantity'])) {
+        $fields[] = "quantity = $$i";
+        $values[] = (int)$data['quantity'];
+        $i++;
     }
 
-    $price = (float)$productRow['price'];
+    if (isset($data['price'])) {
+        $fields[] = "price = $$i";
+        $values[] = (float)$data['price'];
+        $i++;
+    }
 
-    $result = pg_query_params($db, "
-        INSERT INTO cart_items (user_uid, product_id, img_url, quantity, price)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, user_uid, product_id, img_url, quantity, price, added_at
-    ", [
-        $data['user_uid'],
-        $data['product_id'],
-        $data['img_url'],
-        $data['quantity'],
-        $price
-    ]);
+    $values[] = $id; // ID is last parameter
+    $sql = "UPDATE cart_items SET " . implode(', ', $fields) . " WHERE id = $$i RETURNING id, user_uid, product_id, img_url, quantity, price, added_at";
+
+    $result = pg_query_params($db, $sql, $values);
 
     if ($row = pg_fetch_assoc($result)) {
-        $cartItem = [
+        $updatedItem = [
             'id' => (int)$row['id'],
             'user_uid' => $row['user_uid'],
             'product_id' => (int)$row['product_id'],
             'img_url' => $row['img_url'],
             'quantity' => (int)$row['quantity'],
-            'price' => (float)$row['price'],
+            'price' => isset($row['price']) ? (float)$row['price'] : null,
             'added_at' => $row['added_at']
         ];
-        $response->getBody()->write(json_encode($cartItem));
+        $response->getBody()->write(json_encode(['message' => 'Cart item updated', 'item' => $updatedItem]));
     } else {
-        $response->getBody()->write(json_encode(['error' => 'Failed to add cart item.']));
-        return $response->withStatus(500);
+        $response->getBody()->write(json_encode(['error' => 'Cart item not found or not updated']));
+        return $response->withStatus(404);
     }
 
     return $response->withHeader('Content-Type', 'application/json');
 });
+
 
 // DELETE /cart_items/{id}/delete
 $app->delete('/cart_items/{id}/delete', function (Request $request, Response $response, $args) use ($db) {
