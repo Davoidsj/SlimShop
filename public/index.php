@@ -246,6 +246,60 @@ $app->get('/similar/{id}', function (Request $request, Response $response, $args
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// GET /reviews
+$app->get('/reviews', function (Request $request, Response $response) use ($db) {
+    $params = $request->getQueryParams();
+    $values = [];
+    $whereSQL = '';
+    
+    if (!empty($params['product_id'])) {
+        $whereSQL = 'WHERE product_id = $1';
+        $values[] = (int)$params['product_id'];
+    }
+
+    $query = "SELECT * FROM reviews $whereSQL ORDER BY date DESC";
+    $result = pg_query_params($db, $query, $values);
+
+    $reviews = [];
+    while ($row = pg_fetch_assoc($result)) {
+        $reviews[] = [
+            'id' => (int)$row['id'],
+            'product_id' => (int)$row['product_id'],
+            'rating' => (int)$row['rating'],
+            'comment' => $row['comment'],
+            'date' => $row['date'],
+            'reviewerName' => $row['reviewername'],
+            'reviewerEmail' => $row['revieweremail']
+        ];
+    }
+
+    $response->getBody()->write(json_encode($reviews));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+// GET /reviews/{id}
+$app->get('/reviews/{id}', function (Request $request, Response $response, $args) use ($db) {
+    $id = (int)$args['id'];
+    $result = pg_query_params($db, "SELECT * FROM reviews WHERE id = $1", [$id]);
+
+    if ($row = pg_fetch_assoc($result)) {
+        $review = [
+            'id' => (int)$row['id'],
+            'product_id' => (int)$row['product_id'],
+            'rating' => (int)$row['rating'],
+            'comment' => $row['comment'],
+            'date' => $row['date'],
+            'reviewerName' => $row['reviewername'],
+            'reviewerEmail' => $row['revieweremail']
+        ];
+        $response->getBody()->write(json_encode($review));
+    } else {
+        $response->getBody()->write(json_encode(['error' => 'Review not found']));
+        return $response->withStatus(404);
+    }
+
+    return $response->withHeader('Content-Type', 'application/json');
+});
 
 // GET /imagecarousel
 $app->get('/imagecarousel', function (Request $request, Response $response) use ($db) {
